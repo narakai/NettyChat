@@ -4,6 +4,8 @@ import com.freddy.im.HeartbeatRespHandler;
 import com.freddy.im.LoginAuthRespHandler;
 import com.freddy.im.protobuf.MessageProtobuf;
 
+import java.util.concurrent.TimeUnit;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -11,6 +13,9 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.protobuf.ProtobufDecoder;
 import io.netty.handler.codec.protobuf.ProtobufEncoder;
+import io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder;
+import io.netty.handler.codec.protobuf.ProtobufVarint32LengthFieldPrepender;
+import io.netty.handler.timeout.IdleStateHandler;
 
 /**
  * <p>@ProjectName:     NettyChat</p>
@@ -43,6 +48,10 @@ public class TCPChannelInitializerHandler extends ChannelInitializer<Channel> {
         // 增加protobuf编解码支持
         pipeline.addLast(new ProtobufEncoder());
         pipeline.addLast(new ProtobufDecoder(MessageProtobuf.Msg.getDefaultInstance()));
+        //请求的解码
+        pipeline.addLast(new ProtobufVarint32FrameDecoder());
+        //响应的编码
+        pipeline.addLast(new ProtobufVarint32LengthFieldPrepender());
 
         // 握手认证消息响应处理handler
         pipeline.addLast(LoginAuthRespHandler.class.getSimpleName(), new LoginAuthRespHandler(imsClient));
@@ -50,5 +59,13 @@ public class TCPChannelInitializerHandler extends ChannelInitializer<Channel> {
         pipeline.addLast(HeartbeatRespHandler.class.getSimpleName(), new HeartbeatRespHandler(imsClient));
         // 接收消息处理handler
         pipeline.addLast(TCPReadHandler.class.getSimpleName(), new TCPReadHandler(imsClient));
+
+        pipeline.addLast("idleStateHandler",
+                new IdleStateHandler(15, 0, 0, TimeUnit.MINUTES));
+        //字符串编解码器
+//        pipeline.addLast(
+//                new StringDecoder(),
+//                new StringEncoder()
+//        );
     }
 }
